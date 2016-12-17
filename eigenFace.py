@@ -39,6 +39,12 @@ class EigenFace(object):
             #img = cv2.pyrDown(img)
             self.image_dictionary.append((image_name,img,self.getClassFromName(image_name)))
             self.vector_matrix[:,idx] = img.flatten()
+
+        subjects = set()
+        for _,_,subject in self.image_dictionary:
+            subjects.add(subject)
+        print ("loaded total image: %d, subject number is: %d" % (len(self.image_dictionary), len(subjects)))
+
         self.get_eigen()
         self.getWeight4Training()
 
@@ -234,7 +240,10 @@ class EigenFace(object):
         else:
             return name.__hash__()
 
-eigen_face = EigenFace(variance_pct=0.99,knn=1,suffix="*[0-9].pgm")
+### for att face dataset
+eigen_face = EigenFace(variance_pct=0.99,knn=1)
+### for yale face dataset
+#eigen_face = EigenFace(variance_pct=0.99,knn=1,suffix="*[0-9].pgm")
 eigen_face.plot_image_dictionary()
 eigen_face.plot_eigen_vector(16)
 eigen_face.plot_mean_vector()
