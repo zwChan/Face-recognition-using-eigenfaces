@@ -73,6 +73,8 @@ class EigenFace(object):
         self.eigen = eigen
         # The top K eigen value that represent 'most' of the variance in the training data
         self.K = self.get_number_of_components_to_preserve_variance(self.variance_pct)
+        print ("get_number_of_components_to_preserve_variance: var=%.2f, K=%d" % (self.variance_pct,self.K))
+
 
     def getWeight4Training(self):
         self.weightTraining = np.dot(self.eigen.u.T, self.vector_matrix)
@@ -85,7 +87,7 @@ class EigenFace(object):
     def get_number_of_components_to_preserve_variance(self, variance=.95):
         for ii, eigen_value_cumsum in enumerate(self.get_eigen_value_distribution()):
             if eigen_value_cumsum >= variance:
-                print ("get_number_of_components_to_preserve_variance: var=%.2f, K=%d" % (variance,ii))
+                #print ("get_number_of_components_to_preserve_variance: var=%.2f, K=%d" % (variance,ii))
                 return ii
 
     def getWeight4NormalizedImg(self, imgNormlized):
@@ -123,8 +125,8 @@ class EigenFace(object):
         knn = cv2.KNearest()
         knn.train(self.weightTraining[0:Kpca,:].T.astype(np.float32),np.asarray(responses,dtype=np.float32))
         # we have to discard the first predict result, since it has to be itself
-        ret, results, neighbours ,dist = knn.find_nearest(self.weightTraining[0:Kpca,:].T.astype(np.float32), knn_k)
-        neighbours = neighbours[:,1:]
+        ret, results, neighbours2 ,dist = knn.find_nearest(self.weightTraining[0:Kpca,:].T.astype(np.float32), knn_k)
+        neighbours = neighbours2[:,1:]
         eval_data = []
         for idx,nb in enumerate(neighbours):
             neighbours_count = []
@@ -164,15 +166,16 @@ class EigenFace(object):
                     div, rem = divmod(jj, num_row_y)
                     axarr[div, rem].axis('off')
 
-    def plot_eigen_vector(self, n_eigen=None):
-        if n_eigen is None:
-            self.plot_eigen_vectors()
+    def plot_eigen_vector(self, n_eigen=-1, nth=-1):
+        if nth is -1:
+            self.plot_eigen_vectors(n_eigen)
         else:
             plt.figure()
-            plt.imshow(np.reshape(self.eigen.u[:,n_eigen], self.imgShape), cmap=plt.cm.gray)
+            plt.imshow(np.reshape(self.eigen.u[:,nth], self.imgShape), cmap=plt.cm.gray)
 
-    def plot_eigen_vectors(self):
-        number = self.eigen.u.shape[1]
+    def plot_eigen_vectors(self,number=-1):
+        if number<0:
+            number = self.eigen.u.shape[1]
         num_row_x = num_row_y = int(np.floor(np.sqrt(number-1))) + 1
         fig, axarr = plt.subplots(num_row_x, num_row_y)
         for ii in range(number):
@@ -195,12 +198,18 @@ class EigenFace(object):
 
     def plot_pca_components_proportions(self):
         fig,axarr = plt.subplots()
+        plt.grid(True)
+        plt.xlabel('number of components')
+        plt.ylabel('Percentage of variance')
         axarr.set_title(" plot_pca_components_proportions")
         axarr.scatter(range(self.eigen.variance_proportion.size), self.eigen.variance_proportion)
 
 
     def plot_eigen_value_distribution(self):
         fig,axarr = plt.subplots()
+        plt.grid(True)
+        plt.xlabel('number of components')
+        plt.ylabel('Percentage of variance')
         axarr.set_title(" plot_eigen_value_distribution")
         data = np.cumsum(self.eigen.lamb,) / np.sum(self.eigen.lamb)
         axarr.scatter(range(data.size), data)
@@ -225,20 +234,32 @@ class EigenFace(object):
         else:
             return name.__hash__()
 
-eigen_face = EigenFace(variance_pct=0.99,knn=1)
-# eigen_face.plot_image_dictionary()
-# eigen_face.plot_eigen_vector()
-# eigen_face.plot_mean_vector()
-# eigen_face.plot_pca_components_proportions()
+eigen_face = EigenFace(variance_pct=0.99,knn=1,suffix="*[0-9].pgm")
+eigen_face.plot_image_dictionary()
+eigen_face.plot_eigen_vector(16)
+eigen_face.plot_mean_vector()
+eigen_face.plot_pca_components_proportions()
 # eigen_face.plot_eigen_value_distribution()
-# eigen_face.plotTrainingClass()
-# eigen_face.porject2eigenFaces(eigen_face.vector_matrix[:,0],-1)
+eigen_face.plotTrainingClass()
+eigen_face.K = eigen_face.get_number_of_components_to_preserve_variance(0.80)
+print (eigen_face.K)
+eigen_face.porject2eigenFaces(eigen_face.vector_matrix[:,1],-1)
 
-for knn_k in range(1,4):
-    for var in [0.99,0.95,0.90]:
+plt.figure()
+plt.grid(True)
+plt.xlabel('k neighbors in eigenfaces space')
+plt.ylabel('Precision')
+precisions = []
+for i,var in enumerate([0.99,0.95,0.90,0.80,0.70,0.60,0.50]):
+    precisions.append([])
+    for j,knn_k in enumerate(range(1,10)):
         eigen_face.K = eigen_face.get_number_of_components_to_preserve_variance(var)
-        print("knn_k: %d, variance:%f" % (knn_k, var))
         pre = eigen_face.get_eval(knn_k)
-        print (pre)
+        precisions[i].append(pre)
+        print("knn_k: %2d, variance:%.2f(%d),\tprecision: %.4f" % (knn_k, var, eigen_face.K, pre))
+    plt.plot(range(1,10),precisions[i],label="variance: %.2f%%" % (var),marker=i)
+plt.legend(loc='best')
 
+precisions = np.asarray(precisions)
+print (precisions)
 plt.show()

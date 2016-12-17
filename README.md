@@ -1,7 +1,7 @@
 EigenFace
 =========
 
-EigenFace implementation
+EigenFace implementation of the method in Turk and Pentland's paper.
 
 ### Requirements
 - Numpy
