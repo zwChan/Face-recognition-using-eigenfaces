@@ -266,7 +266,7 @@ for i,var in enumerate([0.99,0.95,0.90,0.80,0.70,0.60,0.50]):
         pre = eigen_face.get_eval(knn_k)
         precisions[i].append(pre)
         print("knn_k: %2d, variance:%.2f(%d),\tprecision: %.4f" % (knn_k, var, eigen_face.K, pre))
-    plt.plot(range(1,10),precisions[i],label="variance: %.2f%%" % (var),marker=i)
+    plt.plot(range(1,10),precisions[i],label="variance: %.0f%%" % (var*100),marker=i)
 plt.legend(loc='best')
 
 precisions = np.asarray(precisions)
